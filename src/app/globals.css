@@ -1,0 +1,43 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&family=Plus+Jakarta+Sans:wght@200..800&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #e41c44;
+  --color-primary-black: #111927;
+  --color-secondary: #6c737f;
+  --color-error: #f04438;
+  --color-warning: #b54708;
+  --color-primary-light: #ffe0de;
+  --color-success: #107569;
+  --color-background: #efefef;
+
+  --font-default: "Inter", sans-serif;
+  --font-primary: "Plus Jakarta Sans", sans-serif;
+
+  --breakpoint-xs: 360px;
+}
+
+.shadow-card {
+  box-shadow: 5px 5px 5px 5px rgba(0, 0, 0, 0.07);
+}
+
+/* For Chrome, Safari, Edge */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: block;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* For Firefox */
+input[type="date"] {
+  -moz-appearance: textfield;
+}
+
+.table-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
