@@ -11,6 +11,7 @@ module.exports = {
         "primary-light": "#ffe0de",
         success: "#107569",
         background: "#efefef",
+        darkBg: "#8c3737",
       },
       fontFamily: {
         default: ["Inter", "sans-serif"],

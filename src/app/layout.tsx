@@ -1,4 +1,5 @@
 import "./globals.css";
+import { ToastContainer } from "react-toastify";
 
 export const metadata = {
   title: "Live Code Editor",
@@ -12,8 +13,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      {/* <head /> */}
       <body className="font-default" cz-shortcut-listen="true">
         {children}
+        <ToastContainer position="top-right" autoClose={3000} />
       </body>
     </html>
   );
