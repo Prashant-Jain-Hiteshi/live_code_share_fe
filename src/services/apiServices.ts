@@ -71,4 +71,26 @@ export const verifyOtp = async (formData: any) => {
     }
   }
 };
+export const LoginApi = async (formData: any) => {
+  try {
+    const response = await api.post("/auth/login", formData);
+    console.log(response.data);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      console.error("Error response:", error.response.data?.message);
+      throw new Error(
+        error.response.data.message || "An error occurred during signup."
+      );
+    } else if (error.request) {
+      console.error("Error request:", error.request);
+      throw new Error("No response from the server. Please try again later.");
+    } else {
+      console.error("Error message:", error.message);
+      throw new Error("An error occurred. Please try again.");
+    }
+  }
+};
+
+
 

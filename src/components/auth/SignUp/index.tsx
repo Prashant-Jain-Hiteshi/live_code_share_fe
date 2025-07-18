@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import LogoImage from "../../../assets/code-sync.png";
 import InputField from "@/components/CommonInput";
 import { emailValidator } from "@/helper/Validator";
@@ -13,6 +13,13 @@ import { useRouter } from "next/navigation";
 
 const SignUp = () => {
   const router = useRouter();
+
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      router.push("/dashboard", { scroll: false });
+    }
+  }, [router]);
+
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
     useState<boolean>(false);
@@ -75,7 +82,7 @@ const SignUp = () => {
   };
   return (
     <>
-      {!isOtpVerifyModelShow ? (
+      {isOtpVerifyModelShow ? (
         <OtpVerify email={formData?.email} />
       ) : (
         <div className="bg-darkBg h-screen flex justify-center items-center px-4">
@@ -86,7 +93,7 @@ const SignUp = () => {
 
             <h2 className="text-2xl font-semibold text-center mb-6">Sign Up</h2>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="" onSubmit={handleSubmit}>
               <InputField
                 type="text"
                 label=""
