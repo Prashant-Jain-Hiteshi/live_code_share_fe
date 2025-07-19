@@ -6,8 +6,10 @@ import OtpInput from "@/components/CommonOtpInput";
 import { EmailVerifyPops } from "@/utils/common/Interface/SignUp";
 import { verifyOtp } from "@/services/apiServices";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
 
 const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [otp, setOtp] = useState<string>("");
   const handleChange = (value: string) => {
@@ -25,7 +27,12 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
       };
 
       const response = await verifyOtp(paylod);
+      if (response?.token && response?.user) {
+        localStorage.setItem("auth_token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
       toast.success(response?.message);
+      router.push("dashboard");
     } catch (error: any) {
       toast.error(error?.message);
     } finally {
@@ -63,12 +70,12 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
                 } text-white font-semibold py-3 rounded-md transition duration-300`}
               />
 
-              <p className="text-sm text-center mt-4 text-gray-300">
+              {/* <p className="text-sm text-center mt-4 text-gray-300">
                 Back to{" "}
                 <span className="text-blue-500 cursor-pointer hover:underline">
                   Login
                 </span>
-              </p>
+              </p> */}
             </div>
           </form>
         </div>
