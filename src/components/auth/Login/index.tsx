@@ -83,6 +83,17 @@ const Login = () => {
                 required
                 extraValidation={() => errors.email}
               />
+              <InputField
+                type="email"
+                label=""
+                name="email"
+                value={formData.email}
+                onChange={handlechange}
+                placeholder="Email"
+                className=""
+                required
+                extraValidation={() => errors.email}
+              />
 
               <CommonButton
                 label="Login"
