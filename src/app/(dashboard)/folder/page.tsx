@@ -16,36 +16,40 @@ export default function MyFilesPage() {
   const router = useRouter();
   const token =
     typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-  const userId =
-    typeof window !== "undefined" ? localStorage.getItem("user_id") : null; // Store after login
+  // const userId =
+  // typeof window !== "undefined" ? localStorage.getItem("user") : null; // Store after login
 
   // ✅ Fetch user files
   useEffect(() => {
-    if (!token || !userId) return;
+    if (!token) return;
 
-    const fetchFiles = async () => {
+    async function getMyFiles() {
       try {
-        const res = await fetch(
-          `http://localhost:4000/files?userId=${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+        const response = await fetch("http://localhost:4000/files/my", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
-        if (!res.ok) throw new Error("Failed to fetch files");
-        const data = await res.json();
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Files:", data);
         setFiles(data);
-      } catch (err) {
-        console.error(err);
-      } finally {
         setLoading(false);
+      } catch (error: any) {
+        console.error("Failed to fetch files:", error.message);
       }
-    };
+    }
 
-    fetchFiles();
-  }, [token, userId]);
+    getMyFiles();
+
+    // fetchFiles();
+  }, [token]);
 
   if (loading) {
     return (

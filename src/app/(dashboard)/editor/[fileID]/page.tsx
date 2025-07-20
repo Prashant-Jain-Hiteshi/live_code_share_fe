@@ -47,11 +47,14 @@ export default function EditorPage() {
     const fetchFile = async () => {
       try {
         console.log(`Fetching file with ID: ${fileId}`);
-        const res = await fetch(`http://localhost:4000/files/${fileId}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          `http://localhost:4000/files/single/${fileId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
         const data = await res.json();
