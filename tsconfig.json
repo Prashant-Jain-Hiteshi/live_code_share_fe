@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
     "types": ["jest", "node", "@testing-library/jest-dom"],
-    "target": "es5",
+    "target": "es2015",
     "lib": ["dom", "dom.iterable", "esnext"],
+    "downlevelIteration": true,
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
