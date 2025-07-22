@@ -1,5 +1,5 @@
 import { InputFieldProps } from "@/utils/common/Interface/CommonInput/Index";
-import { error } from "console";
+
 import React from "react";
 
 const InputField: React.FC<InputFieldProps> = ({

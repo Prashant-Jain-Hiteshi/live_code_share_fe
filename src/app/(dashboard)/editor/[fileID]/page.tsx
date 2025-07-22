@@ -3,36 +3,59 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { initializeSocket } from "@/socket/socket";
 import dynamic from "next/dynamic";
-import * as monaco from "monaco-editor";
+import type * as monacoType from "monaco-editor";
 
-const MonacoEditor = dynamic(
-  () => import("@monaco-editor/react").then(mod => mod.Editor),
-  { ssr: false }
-);
+import CommonButton from "@/components/CommonButtton";
+import CommonDialog from "@/components/CommonDialog/page";
+import { toast } from "react-toastify";
+import InputField from "@/components/CommonInput";
+import { emailValidator } from "@/helper/Validator";
+import {
+  getFileById,
+  shareFileByEmail,
+  updateFileContent,
+} from "@/services/apiServices";
 
-interface Cursor {
-  userId: number;
-  position: number;
-  color: string;
-  userName: string;
-}
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+});
 
 export default function EditorPage() {
   const [fileId, setFileId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
-  const [language, setLanguage] = useState("html");
   const [users, setUsers] = useState<(string | number)[]>([]);
-  // const [cursors, setCursors] = useState<Cursor[]>([]);
+  const [shareEmail, setShareEmail] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [srcDoc, setSrcDoc] = useState("");
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [code, setCode] = useState<string>(`<html>
+  <head>
+    <style>
+      body { background-color: aqua; }
+      h1 { color: green; }
+    </style>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+    <script>
+      console.log("Hello from JS");
+    </script>
+  </body>
+</html>`);
+
+  const editorRef = useRef<monacoType.editor.IStandaloneCodeEditor | null>(
+    null
+  );
+  const monacoRef = useRef<typeof monacoType | null>(null);
   const decorationsRef = useRef<{ [key: number]: string[] }>({});
 
   const socket = useMemo(() => initializeSocket(), []);
   let gotSocketUpdate = false;
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
   const userInfo =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("user") || "{}")
@@ -49,32 +72,23 @@ export default function EditorPage() {
   }, []);
 
   useEffect(() => {
-    if (!fileId || !token) return;
+    if (!fileId) return;
 
     const fetchFile = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:4000/files/single/${fileId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        const data = await res.json();
+        const data = await getFileById(fileId);
         if (!gotSocketUpdate) setText(data.content || "");
         setTitle(data.title || "Untitled");
-        setLanguage(data.language || "html");
       } catch (err) {
         console.error("Error fetching file:", err);
       }
     };
 
     fetchFile();
-  }, [fileId, token]);
+  }, [fileId]);
 
   useEffect(() => {
     if (!fileId || !userId) return;
-
     socket.emit("register_user", { email: userInfo.email });
     socket.emit("joinRoom", { roomId: Number(fileId), userId });
 
@@ -82,20 +96,16 @@ export default function EditorPage() {
       setText(content);
       setCode(content);
       setSrcDoc(content);
-
       gotSocketUpdate = true;
     });
 
     socket.on("cursor_update", ({ userId: remoteId, position, userName }) => {
-      // setCursors(prev => {
-      //   const filtered = prev.filter(c => c.userId !== userId);
-      //   return [...filtered, { userId, position, color, userName }];
-      // });
-      if (!editorRef.current || remoteId === userId) return;
+      if (!editorRef.current || remoteId === userId || !monacoRef.current)
+        return;
       const editor = editorRef.current;
+      const monaco = monacoRef.current;
       const pos = new monaco.Position(position.lineNumber, position.column);
 
-      // Remove old decoration
       if (decorationsRef.current[remoteId]) {
         editor.deltaDecorations(decorationsRef.current[remoteId], []);
       }
@@ -118,8 +128,6 @@ export default function EditorPage() {
         ]
       );
       decorationsRef.current[remoteId] = newDec;
-
-      // Inject inline styles
       injectCursorStyles(color, userName);
     });
 
@@ -128,8 +136,6 @@ export default function EditorPage() {
     });
 
     socket.on("user_left", ({ userId }) => {
-      // setUsers(prev => prev.filter(id => id !== userId));
-      // setCursors(prev => prev.filter(c => c.userId !== userId));
       setUsers(prev => prev.filter(id => id !== userId));
       if (editorRef.current && decorationsRef.current[userId]) {
         editorRef.current.deltaDecorations(decorationsRef.current[userId], []);
@@ -150,8 +156,6 @@ export default function EditorPage() {
     setText(value);
     setCode(value);
     setSrcDoc(value);
-    // handleGoLive();
-
     if (fileId) {
       socket.emit("code_change", {
         roomId: Number(fileId),
@@ -160,12 +164,14 @@ export default function EditorPage() {
       });
     }
   };
-  const handleEditorDidMount = (
-    editor: monaco.editor.IStandaloneCodeEditor
+
+  const handleEditorDidMount = async (
+    editor: any,
+    monaco: typeof monacoType
   ) => {
     editorRef.current = editor;
-
-    editor.onDidChangeCursorPosition(e => {
+    monacoRef.current = monaco;
+    editor.onDidChangeCursorPosition((e: any) => {
       const position = e.position;
       socket.emit("cursor_move", {
         roomId: Number(fileId),
@@ -176,45 +182,77 @@ export default function EditorPage() {
     });
   };
 
-  const [code, setCode] = useState<string>(`<html>
-  <head>
-    <style>
-      body { background-color: aqua; }
-      h1 { color: green; }
-    </style>
-  </head>
-  <body>
-    <h1>Hello World</h1>
-    <script>
-      console.log("Hello from JS");
-    </script>
-  </body>
-</html>`);
-  const handleGoLive = () => {
-    setSrcDoc(code);
+  const handleCopyLink = () => {
+    if (typeof window !== "undefined" && navigator?.clipboard) {
+      navigator.clipboard
+        .writeText(globalThis.location.href)
+        .then(() => {
+          setCopied(true);
+          toast.success("Link copied to clipboard!");
+        })
+        .catch(err => {
+          console.error("Clipboard write failed:", err);
+          toast.error("Failed to copy link");
+        });
+    } else {
+      toast.error("Clipboard not supported");
+    }
+  };
+  const handleChangeEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setShareEmail(email);
+    if (!emailValidator.test(email)) {
+      setEmailError("Please enter a valid email address.");
+    } else {
+      setEmailError(null);
+    }
+  };
+  const handleDialogBox = async () => {
+    setIsShareOpen(true);
+    if (!fileId) {
+    } else {
+      try {
+        await updateFileContent(fileId, text);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+  const handleShareEmail = async () => {
+    try {
+      setIsLoading(!isLoading);
+      const fileLink = window.location.href;
+      const response = await shareFileByEmail(shareEmail, fileLink);
+      toast.success("Email Share Successfully");
+    } catch (err: any) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
+      setIsShareOpen(false);
+      setShareEmail("");
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      {/* Header */}
       <div className="flex justify-between items-center bg-white shadow px-6 py-3">
-        <h2 className="text-xl font-semibold">{title || "Loading..."}</h2>
+        <h2 className="text-xl font-semibold ">{title || "Loading..."}</h2>
         <div className="text-sm text-gray-600">
           Users Online: {users.length}
         </div>
-        {/* <button
-          onClick={handleGoLive}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-        >
-          Go Live
-        </button> */}
+        <CommonButton
+          label="Share "
+          type="submit"
+          isLoading={false}
+          className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          // onClick={() => }
+          onClick={handleDialogBox}
+        />
       </div>
 
-      {/* Editors */}
-      <div className="flex-1 grid grid-cols-2  gap-4 p-4">
+      <div className="flex-1 grid grid-cols-2 gap-4 p-4">
         <div className="border rounded overflow-hidden shadow">
           <MonacoEditor
-            height="100%"
             defaultLanguage="html"
             value={text}
             theme="vs-dark"
@@ -234,11 +272,65 @@ export default function EditorPage() {
           />
         </div>
       </div>
+
+      <CommonDialog
+        isOpen={isShareOpen}
+        title="Share File"
+        onClose={() => {
+          setIsShareOpen(false);
+          setCopied(false);
+          setShareEmail("");
+          setEmailError(null);
+        }}
+      >
+        <div>
+          <label className="text-sm">Recipient Email</label>
+          <InputField
+            label=""
+            type="email"
+            name="shareEmail"
+            value={shareEmail}
+            placeholder="example@email.com"
+            onChange={handleChangeEmail}
+            className="mt-1"
+            externalError={emailError || ""}
+            required
+            errorSpace={true}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm">Shareable Link</label>
+          <div className="flex items-center justify-between gap-2 mt-1 ">
+            <input
+              type="text"
+              value={typeof window !== "undefined" ? window.location.href : ""}
+              readOnly
+              className="w-full p-2 bg-[#2A2E33] text-white  border-none focus:outline-none"
+            />
+            <CommonButton
+              label="Copy "
+              type="submit"
+              isLoading={false}
+              className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+              onClick={handleCopyLink}
+            />
+          </div>
+        </div>
+        <CommonButton
+          label="Send Link "
+          type="submit"
+          isLoading={isLoading}
+          className=" bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          onClick={handleShareEmail}
+          disabled={!emailValidator.test(shareEmail)}
+        />
+      </CommonDialog>
     </div>
   );
 }
 
-const editorOptions: monaco.editor.IStandaloneEditorConstructionOptions = {
+const editorOptions: monacoType.editor.IStandaloneEditorConstructionOptions = {
   fontSize: 14,
   minimap: { enabled: false },
   automaticLayout: true,
@@ -258,11 +350,11 @@ function getRandomColor() {
   const colors = ["#e41c44", "#107569", "#ff9900", "#007bff", "#6f42c1"];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
 function injectCursorStyles(color: string, name: string) {
   if (typeof document === "undefined") return;
   const styleId = `cursor-style-${name}`;
   if (document.getElementById(styleId)) return;
-
   const style = document.createElement("style");
   style.id = styleId;
   style.innerHTML = `

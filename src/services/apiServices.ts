@@ -126,6 +126,66 @@ export const getMyFiles = async () => {
     }
   }
 };
+export const getFileById = async (
+  fileId: string
+): Promise<{ content: string; title: string }> => {
+  try {
+    const response = await api.get(`/files/single/${fileId}`);
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(error.response.data?.message || "Failed to fetch file.");
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+export const updateFileContent = async (fileId: string, content: string) => {
+  try {
+    const response = await api.put(`/files/${fileId}`, { content });
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(error.response.data?.message || "Failed to update file.");
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+export const shareFileByEmail = async (email: string, fileLink: string) => {
+  try {
+    const response = await api.post("/files/share", { email, fileLink });
+    return response.data;
+  } catch (error: any) {
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(
+        error.response.data?.message || "Failed to share file by email."
+      );
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+
+
+
+
+
 
 
 

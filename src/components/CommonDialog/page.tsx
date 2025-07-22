@@ -15,7 +15,7 @@ const CommonDialog: React.FC<DialogdProps> = ({
 
   return (
     <div className="fixed inset-0 bg-gray-500/75 transition-opacity  flex justify-center items-center z-50">
-      <div className="bg-card rounded-lg shadow-lg w-full max-w-md p-6 relative text-white  border border-gray-700 hover:border-green-400 ">
+      <div className="bg-card rounded-lg shadow-lg w-full max-w-md p-6 relative text-white  border border-gray-700 ">
         <h2 className="text-xl font-semibold mb-2">{title}</h2>
         {description && (
           <p className="text-sm text-gray-600 mb-4">{description}</p>
