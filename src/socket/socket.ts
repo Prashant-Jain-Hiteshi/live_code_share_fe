@@ -5,7 +5,10 @@ interface ServerToClientEvents {
   code_update: (data: { userId: number; content: string }) => void;
   cursor_update: (data: {
     userId: number;
-    position: number;
+    position: {
+      lineNumber: number;
+      column: number;
+    };
     color: string;
     userName: string;
   }) => void;
@@ -24,7 +27,10 @@ interface ClientToServerEvents {
   cursor_move: (data: {
     roomId: number;
     userId: number;
-    position: number;
+    position: {
+      lineNumber: number;
+      column: number;
+    };
     userName: string;
   }) => void;
 }

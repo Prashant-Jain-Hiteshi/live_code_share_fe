@@ -93,7 +93,7 @@ const SignUp = () => {
 
             <h2 className="text-2xl font-semibold text-center mb-6">Sign Up</h2>
 
-            <form className="" onSubmit={handleSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <InputField
                 type="text"
                 label=""

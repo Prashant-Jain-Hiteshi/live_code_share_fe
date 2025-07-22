@@ -18,7 +18,7 @@ const InputField: React.FC<InputFieldProps> = ({
   externalError,
   placeholder = "",
   disabled,
-  errorSpace = true,
+  errorSpace = false,
 }) => {
   return (
     <div>

@@ -13,7 +13,7 @@ export default function Home() {
   const router = useRouter();
   useEffect(() => {
     if (localStorage.getItem("auth_token")) {
-      router.push("/dashboard", { scroll: false });
+      router.push("/folder", { scroll: false });
     } else {
       router.push("/login", { scroll: false });
     }
