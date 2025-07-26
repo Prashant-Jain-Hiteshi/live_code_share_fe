@@ -2,26 +2,60 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { initializeSocket } from "@/socket/socket";
-interface Cursor {
-  userId: number;
-  position: number;
-  color: string;
-  userName: string;
-}
+import dynamic from "next/dynamic";
+import type * as monacoType from "monaco-editor";
+
+import CommonButton from "@/components/CommonButtton";
+import CommonDialog from "@/components/CommonDialog/page";
+import { toast } from "react-toastify";
+import InputField from "@/components/CommonInput";
+import { emailValidator } from "@/helper/Validator";
+import {
+  getFileById,
+  shareFileByEmail,
+  updateFileContent,
+} from "@/services/apiServices";
+
+const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
+  ssr: false,
+});
 
 export default function EditorPage() {
   const [fileId, setFileId] = useState<string | null>(null);
   const [text, setText] = useState("");
   const [title, setTitle] = useState("");
   const [users, setUsers] = useState<(string | number)[]>([]);
-  const [cursors, setCursors] = useState<Cursor[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [shareEmail, setShareEmail] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [srcDoc, setSrcDoc] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [code, setCode] = useState<string>(`<html>
+  <head>
+    <style>
+      body { background-color: aqua; }
+      h1 { color: green; }
+    </style>
+  </head>
+  <body>
+    <h1>Hello World</h1>
+    <script>
+      console.log("Hello from JS");
+    </script>
+  </body>
+</html>`);
+
+  const editorRef = useRef<monacoType.editor.IStandaloneCodeEditor | null>(
+    null
+  );
+  const monacoRef = useRef<typeof monacoType | null>(null);
+  const decorationsRef = useRef<{ [key: number]: string[] }>({});
 
   const socket = useMemo(() => initializeSocket(), []);
   let gotSocketUpdate = false;
 
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
   const userInfo =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("user") || "{}")
@@ -29,7 +63,6 @@ export default function EditorPage() {
   const userId = userInfo.id || Math.floor(Math.random() * 1000);
   const color = useMemo(() => getRandomColor(), []);
 
-  // ✅ Extract fileId from URL after hydration
   useEffect(() => {
     if (typeof window !== "undefined") {
       const parts = window.location.pathname.split("/");
@@ -39,30 +72,12 @@ export default function EditorPage() {
   }, []);
 
   useEffect(() => {
-    if (!fileId || !token) {
-      console.log("Waiting for fileId or token...");
-      return;
-    }
+    if (!fileId) return;
 
     const fetchFile = async () => {
       try {
-        console.log(`Fetching file with ID: ${fileId}`);
-        const res = await fetch(
-          `http://localhost:4000/files/single/${fileId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!res.ok) throw new Error(`Failed to fetch file: ${res.status}`);
-        const data = await res.json();
-        console.log("File fetched:", data);
-        if (!gotSocketUpdate) {
-          setText(data.content || "");
-        }
-
+        const data = await getFileById(fileId);
+        if (!gotSocketUpdate) setText(data.content || "");
         setTitle(data.title || "Untitled");
       } catch (err) {
         console.error("Error fetching file:", err);
@@ -70,43 +85,62 @@ export default function EditorPage() {
     };
 
     fetchFile();
-  }, [fileId, token]);
+  }, [fileId]);
 
   useEffect(() => {
     if (!fileId || !userId) return;
-
     socket.emit("register_user", { email: userInfo.email });
     socket.emit("joinRoom", { roomId: Number(fileId), userId });
 
     socket.on("code_update", ({ content }) => {
-      console.log("code upadte listen", content);
       setText(content);
+      setCode(content);
+      setSrcDoc(content);
       gotSocketUpdate = true;
     });
 
-    socket.on("cursor_update", ({ userId, position, userName }) => {
-      console.log(
-        "cursor update upadte listen",
-        position,
-        userId,
-        color,
-        userName
+    socket.on("cursor_update", ({ userId: remoteId, position, userName }) => {
+      if (!editorRef.current || remoteId === userId || !monacoRef.current)
+        return;
+      const editor = editorRef.current;
+      const monaco = monacoRef.current;
+      const pos = new monaco.Position(position.lineNumber, position.column);
+
+      if (decorationsRef.current[remoteId]) {
+        editor.deltaDecorations(decorationsRef.current[remoteId], []);
+      }
+
+      const newDec = editor.deltaDecorations(
+        [],
+        [
+          {
+            range: new monaco.Range(
+              pos.lineNumber,
+              pos.column,
+              pos.lineNumber,
+              pos.column
+            ),
+            options: {
+              className: "remote-cursor",
+              afterContentClassName: "remote-cursor-label",
+            },
+          },
+        ]
       );
-      setCursors(prev => {
-        const filtered = prev.filter(c => c.userId !== userId);
-        return [...filtered, { userId, position, color, userName }];
-      });
+      decorationsRef.current[remoteId] = newDec;
+      injectCursorStyles(color, userName);
     });
 
     socket.on("user_joined", ({ userId }) => {
-      console.log("user joined", userId);
       setUsers(prev => [...new Set([...prev, userId])]);
     });
 
     socket.on("user_left", ({ userId }) => {
-      console.log("user left", userId);
       setUsers(prev => prev.filter(id => id !== userId));
-      setCursors(prev => prev.filter(c => c.userId !== userId));
+      if (editorRef.current && decorationsRef.current[userId]) {
+        editorRef.current.deltaDecorations(decorationsRef.current[userId], []);
+        delete decorationsRef.current[userId];
+      }
     });
 
     return () => {
@@ -117,88 +151,229 @@ export default function EditorPage() {
     };
   }, [socket, fileId, userId]);
 
-  // ✅ Handle text changes and broadcast
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = e.target.value;
-    setText(newText);
-
+  const handleEditorChange = (value: string | undefined) => {
+    if (!value) return;
+    setText(value);
+    setCode(value);
+    setSrcDoc(value);
     if (fileId) {
       socket.emit("code_change", {
         roomId: Number(fileId),
         userId,
-        content: newText,
+        content: value,
       });
     }
   };
-  const handleCursorMove = () => {
-    const pos = textareaRef.current?.selectionStart || 0;
-    socket.emit("cursor_move", {
-      roomId: Number(fileId),
-      userId,
-      position: pos,
-      userName: userInfo.firstName,
+
+  const handleEditorDidMount = async (
+    editor: any,
+    monaco: typeof monacoType
+  ) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    editor.onDidChangeCursorPosition((e: any) => {
+      const position = e.position;
+      socket.emit("cursor_move", {
+        roomId: Number(fileId),
+        userId,
+        position,
+        userName: userInfo.firstName || "User",
+      });
     });
+  };
+
+  const handleCopyLink = () => {
+    if (typeof window !== "undefined" && navigator?.clipboard) {
+      navigator.clipboard
+        .writeText(globalThis.location.href)
+        .then(() => {
+          setCopied(true);
+          toast.success("Link copied to clipboard!");
+        })
+        .catch(err => {
+          console.error("Clipboard write failed:", err);
+          toast.error("Failed to copy link");
+        });
+    } else {
+      toast.error("Clipboard not supported");
+    }
+  };
+  const handleChangeEmail = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setShareEmail(email);
+    if (!emailValidator.test(email)) {
+      setEmailError("Please enter a valid email address.");
+    } else {
+      setEmailError(null);
+    }
+  };
+  const handleDialogBox = async () => {
+    setIsShareOpen(true);
+    if (!fileId) {
+    } else {
+      try {
+        await updateFileContent(fileId, text);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+  const handleShareEmail = async () => {
+    try {
+      setIsLoading(!isLoading);
+      const fileLink = window.location.href;
+      const response = await shareFileByEmail(shareEmail, fileLink);
+      toast.success("Email Share Successfully");
+    } catch (err: any) {
+      console.log(err);
+    } finally {
+      setIsLoading(false);
+      setIsShareOpen(false);
+      setShareEmail("");
+    }
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <div className="flex justify-between items-center bg-white shadow px-6 py-3">
-        <h2 className="text-xl font-semibold">{title || "Loading..."}</h2>
+        <h2 className="text-xl font-semibold ">{title || "Loading..."}</h2>
         <div className="text-sm text-gray-600">
           Users Online: {users.length}
         </div>
-      </div>
-
-      <div className="flex-1 p-4 relative">
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleChange}
-          onSelect={handleCursorMove}
-          onKeyUp={handleCursorMove}
-          className="w-full h-full p-4 text-lg border rounded-lg shadow focus:outline-none"
-          placeholder="Start typing here..."
+        <CommonButton
+          label="Share "
+          type="submit"
+          isLoading={false}
+          className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          // onClick={() => }
+          onClick={handleDialogBox}
         />
-        {/* Cursor Indicators */}
-        {cursors.map(cursor => {
-          const position = cursor.position || 0;
-          const beforeText = text.slice(0, position);
-          const lines = beforeText.split("\n");
-          const top = (lines.length - 1) * 34;
-          const left = lines[lines.length - 1].length * 10;
-
-          return (
-            <div key={cursor.userId} className="absolute" style={{ top, left }}>
-              <div
-                style={{
-                  backgroundColor: cursor.color,
-                  width: "2px",
-                  height: "24px",
-                  position: "absolute",
-                }}
-              ></div>
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-20px",
-                  left: "0",
-                  backgroundColor: cursor.color,
-                  color: "#fff",
-                  padding: "2px 4px",
-                  borderRadius: "4px",
-                  fontSize: "12px",
-                }}
-              >
-                {cursor.userName}
-              </span>
-            </div>
-          );
-        })}
       </div>
+
+      <div className="flex-1 grid grid-cols-2 gap-4 p-4">
+        <div className="border rounded overflow-hidden shadow">
+          <MonacoEditor
+            defaultLanguage="html"
+            value={text}
+            theme="vs-dark"
+            onChange={handleEditorChange}
+            options={editorOptions}
+            onMount={handleEditorDidMount}
+          />
+        </div>
+        <div className="border rounded shadow bg-white overflow-hidden">
+          <iframe
+            title="Live Preview"
+            srcDoc={srcDoc}
+            sandbox="allow-scripts"
+            frameBorder="0"
+            width="100%"
+            height="100%"
+          />
+        </div>
+      </div>
+
+      <CommonDialog
+        isOpen={isShareOpen}
+        title="Share File"
+        onClose={() => {
+          setIsShareOpen(false);
+          setCopied(false);
+          setShareEmail("");
+          setEmailError(null);
+        }}
+      >
+        <div>
+          <label className="text-sm">Recipient Email</label>
+          <InputField
+            label=""
+            type="email"
+            name="shareEmail"
+            value={shareEmail}
+            placeholder="example@email.com"
+            onChange={handleChangeEmail}
+            className="mt-1"
+            externalError={emailError || ""}
+            required
+            errorSpace={true}
+          />
+        </div>
+
+        <div>
+          <label className="text-sm">Shareable Link</label>
+          <div className="flex items-center justify-between gap-2 mt-1 ">
+            <input
+              type="text"
+              value={typeof window !== "undefined" ? window.location.href : ""}
+              readOnly
+              className="w-full p-2 bg-[#2A2E33] text-white  border-none focus:outline-none"
+            />
+            <CommonButton
+              label="Copy "
+              type="submit"
+              isLoading={false}
+              className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+              onClick={handleCopyLink}
+            />
+          </div>
+        </div>
+        <CommonButton
+          label="Send Link "
+          type="submit"
+          isLoading={isLoading}
+          className=" bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          onClick={handleShareEmail}
+          disabled={!emailValidator.test(shareEmail)}
+        />
+      </CommonDialog>
     </div>
   );
 }
+
+const editorOptions: monacoType.editor.IStandaloneEditorConstructionOptions = {
+  fontSize: 14,
+  minimap: { enabled: false },
+  automaticLayout: true,
+  suggestOnTriggerCharacters: true,
+  quickSuggestions: true,
+  formatOnPaste: true,
+  formatOnType: true,
+  tabSize: 2,
+  wordWrap: "on",
+  scrollBeyondLastLine: false,
+  renderWhitespace: "all",
+  fixedOverflowWidgets: true,
+  lineNumbers: "on",
+};
+
 function getRandomColor() {
   const colors = ["#e41c44", "#107569", "#ff9900", "#007bff", "#6f42c1"];
   return colors[Math.floor(Math.random() * colors.length)];
+}
+
+function injectCursorStyles(color: string, name: string) {
+  if (typeof document === "undefined") return;
+  const styleId = `cursor-style-${name}`;
+  if (document.getElementById(styleId)) return;
+  const style = document.createElement("style");
+  style.id = styleId;
+  style.innerHTML = `
+    .remote-cursor {
+      border-left: 2px solid ${color};
+      height: 100%;
+    }
+    .remote-cursor-label::after {
+      content: "${name}";
+      position: absolute;
+      background: ${color};
+      color: white;
+      padding: 2px 4px;
+      font-size: 10px;
+      top: -1.2em;
+      left: 0;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+  `;
+  document.head.appendChild(style);
 }

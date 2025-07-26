@@ -82,6 +82,7 @@ const Login = () => {
                 className=""
                 required
                 extraValidation={() => errors.email}
+                errorSpace={true}
               />
 
               <CommonButton

@@ -4,7 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { useEffect, useRef } from "react";
 import LogoImage from "../../assets/code-sync.png";
 import FolderImage from "../../assets/folder.png";
-import dashboardImage from "../../assets/dashboard.png";
+import LiveCodeImage from "../../assets/live_code.png";
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const pathname = usePathname();
@@ -12,16 +12,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const sidebarRef = useRef<HTMLElement | null>(null);
   const user = [
     {
-      href: "/dashboard",
-      src: dashboardImage,
-      label: "Dashboard",
+      href: "/folder",
+      src: FolderImage,
+      label: "All Folders",
       alt: "Dashboard",
       className: "w-4",
     },
     {
-      href: "/folder",
-      src: FolderImage,
-      label: "All Folders",
+      href: "/liveEditor",
+      src: LiveCodeImage,
+      label: "Live Code Editor",
       alt: "Dashboard",
       className: "w-4",
     },
