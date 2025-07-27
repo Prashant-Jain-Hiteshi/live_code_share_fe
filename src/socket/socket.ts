@@ -12,8 +12,8 @@ interface ServerToClientEvents {
     color: string;
     userName: string;
   }) => void;
-  user_joined: (data: { userId: number }) => void;
-  user_left: (data: { userId: number }) => void;
+  user_joined: (data: { userId: number; usersCount: number }) => void;
+  user_left: (data: { userId: number; usersLeft: number }) => void;
 }
 
 interface ClientToServerEvents {

@@ -20,7 +20,7 @@ const CommonButton: React.FC<CommonButtonProps> = ({
         return `bg-transparent text-black  ${disabled ? "" : "cursor-pointer "}`;
 
       default:
-        return `bg-black text-white hover:bg-opacity-9 ${disabled ? "disabled:bg-[#9f9f9f]" : "cursor-pointer"}`;
+        return `bg-black text-white hover:bg-opacity-9 ${disabled ? "disabled:bg-[#9f9f9f] cursor-not-allowed" : "cursor-pointer"}`;
     }
   };
 
