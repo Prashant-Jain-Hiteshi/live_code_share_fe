@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { initializeSocket } from "@/socket/socket";
 import dynamic from "next/dynamic";
 import type * as monacoType from "monaco-editor";
-
 import CommonButton from "@/components/CommonButtton";
 import CommonDialog from "@/components/CommonDialog/page";
 import { toast } from "react-toastify";
@@ -54,7 +53,7 @@ export default function EditorPage() {
   const decorationsRef = useRef<{ [key: number]: string[] }>({});
 
   const socket = useMemo(() => initializeSocket(), []);
-  let gotSocketUpdate = false;
+  const gotSocketUpdateRef = useRef(false);
 
   const userInfo =
     typeof window !== "undefined"
@@ -77,7 +76,7 @@ export default function EditorPage() {
     const fetchFile = async () => {
       try {
         const data = await getFileById(fileId);
-        if (!gotSocketUpdate) setText(data.content || "");
+        if (!gotSocketUpdateRef.current) setText(data.content || "");
         setTitle(data.title || "Untitled");
       } catch (err) {
         console.error("Error fetching file:", err);
@@ -96,12 +95,20 @@ export default function EditorPage() {
       setText(content);
       setCode(content);
       setSrcDoc(content);
-      gotSocketUpdate = true;
+      gotSocketUpdateRef.current = true;
     });
 
     socket.on("cursor_update", ({ userId: remoteId, position, userName }) => {
-      if (!editorRef.current || remoteId === userId || !monacoRef.current)
+      console.log("losted cirso update", remoteId, position, userName);
+      if (
+        !editorRef.current ||
+        remoteId === userInfo.id ||
+        !monacoRef.current
+      ) {
+        console.log("for self", remoteId, userId);
         return;
+      }
+
       const editor = editorRef.current;
       const monaco = monacoRef.current;
       const pos = new monaco.Position(position.lineNumber, position.column);

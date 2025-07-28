@@ -7,12 +7,13 @@ import { EmailVerifyPops } from "@/utils/common/Interface/SignUp";
 import { verifyOtp } from "@/services/apiServices";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import CommonOtp from "@/components/CommonOtpInput";
 
 const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [otp, setOtp] = useState<string>("");
-  const handleChange = (value: string) => {
+  const handleOtpChange = (value: string) => {
     setOtp(value);
   };
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,7 +33,7 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       toast.success(response?.message);
-      router.push("dashboard");
+      router.push("liveEditor");
     } catch (error: any) {
       toast.error(error?.message);
     } finally {
@@ -41,23 +42,19 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
   };
   return (
     <div className="bg-darkBg h-screen flex justify-center items-center">
-      <div className="text-background bg-[#1C2023] w-[30%] p-10 rounded-lg">
+      <div className="text-background bg-[#1C2023] p-10 rounded-lg md:w-[30%] sm-[50%] w-[80%]">
         <div className="flex justify-center mb-4">
           <Image src={LogoImage} alt="Logo" width={160} height={40} />
         </div>
 
-        <h2 className="text-2xl font-semibold text-center mb-8">
+        <h2 className="sM;text-2xl font-semibold text-center mb-8 ">
           OTP Verification
         </h2>
 
         <div className="flex flex-col gap-4">
           <form onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-4">
-              <OtpInput
-                length={4}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
+            <div className="flex flex-col gap-4 items-center">
+              <CommonOtp value={otp} onChange={handleOtpChange} />
 
               <CommonButton
                 type="submit"
@@ -70,12 +67,12 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
                 } text-white font-semibold py-3 rounded-md transition duration-300`}
               />
 
-              {/* <p className="text-sm text-center mt-4 text-gray-300">
+              <p className="text-sm text-center mt-4 text-gray-300">
                 Back to{" "}
-                <span className="text-blue-500 cursor-pointer hover:underline">
-                  Login
-                </span>
-              </p> */}
+                <a href="/login" className="text-green-400 hover:underline">
+                  login
+                </a>
+              </p>
             </div>
           </form>
         </div>
