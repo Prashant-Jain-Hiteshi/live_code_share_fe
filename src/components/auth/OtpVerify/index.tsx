@@ -2,15 +2,17 @@ import Image from "next/image";
 import React, { useState } from "react";
 import LogoImage from "../../../assets/code-sync.png";
 import CommonButton from "@/components/CommonButtton";
-import OtpInput from "@/components/CommonOtpInput";
 import { EmailVerifyPops } from "@/utils/common/Interface/SignUp";
 import { verifyOtp } from "@/services/apiServices";
 import { toast } from "react-toastify";
+import { useRouter } from "next/navigation";
+import CommonOtp from "@/components/CommonOtpInput";
 
 const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [otp, setOtp] = useState<string>("");
-  const handleChange = (value: string) => {
+  const handleOtpChange = (value: string) => {
     setOtp(value);
   };
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,38 +21,40 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
     try {
       setIsLoading(true);
 
-      const paylod = {
+      const payload = {
         email: email,
         otp: otp,
       };
 
-      const response = await verifyOtp(paylod);
+      const response = await verifyOtp(payload);
+      if (response?.token && response?.user) {
+        localStorage.setItem("auth_token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+      }
       toast.success(response?.message);
-    } catch (error: any) {
-      toast.error(error?.message);
+      router.push("folder");
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
     } finally {
       setIsLoading(false);
     }
   };
   return (
     <div className="bg-darkBg h-screen flex justify-center items-center">
-      <div className="text-background bg-[#1C2023] w-[30%] p-10 rounded-lg">
+      <div className="text-background bg-[#1C2023] p-10 rounded-lg md:w-[30%] sm:w-[50%] w-[80%]">
         <div className="flex justify-center mb-4">
           <Image src={LogoImage} alt="Logo" width={160} height={40} />
         </div>
 
-        <h2 className="text-2xl font-semibold text-center mb-8">
+        <h2 className="sM:text-2xl font-semibold text-center mb-8 ">
           OTP Verification
         </h2>
 
         <div className="flex flex-col gap-4">
           <form onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-4">
-              <OtpInput
-                length={4}
-                onChange={handleChange}
-                disabled={isLoading}
-              />
+            <div className="flex flex-col gap-4 items-center">
+              <CommonOtp value={otp} onChange={handleOtpChange} />
 
               <CommonButton
                 type="submit"
@@ -65,9 +69,9 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
 
               <p className="text-sm text-center mt-4 text-gray-300">
                 Back to{" "}
-                <span className="text-blue-500 cursor-pointer hover:underline">
-                  Login
-                </span>
+                <a href="/login" className="text-green-400 hover:underline">
+                  login
+                </a>
               </p>
             </div>
           </form>

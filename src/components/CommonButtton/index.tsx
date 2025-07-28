@@ -20,7 +20,7 @@ const CommonButton: React.FC<CommonButtonProps> = ({
         return `bg-transparent text-black  ${disabled ? "" : "cursor-pointer "}`;
 
       default:
-        return `bg-black text-white hover:bg-opacity-9 ${disabled ? "disabled:bg-[#9f9f9f]" : "cursor-pointer"}`;
+        return `bg-black text-white hover:bg-opacity-9 ${disabled ? "disabled:bg-[#9f9f9f] cursor-not-allowed" : "cursor-pointer"}`;
     }
   };
 
@@ -29,7 +29,7 @@ const CommonButton: React.FC<CommonButtonProps> = ({
   return (
     <button
       type={type}
-      className={` rounded-[12px] text-[14px] font-medium px-5 ${disabled ? " " : "cursor-pointer"}  py-2 px-3 select-none ${variantClass} ${className} `}
+      className={` rounded-[12px] text-[14px] font-medium px-5 ${disabled ? "" : "cursor-pointer"}  py-2 px-3 select-none ${variantClass} ${className} `}
       onClick={isLoading ? () => {} : onClick}
       disabled={disabled}
     >
