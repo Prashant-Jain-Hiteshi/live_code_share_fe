@@ -2,7 +2,6 @@ import Image from "next/image";
 import React, { useState } from "react";
 import LogoImage from "../../../assets/code-sync.png";
 import CommonButton from "@/components/CommonButtton";
-import OtpInput from "@/components/CommonOtpInput";
 import { EmailVerifyPops } from "@/utils/common/Interface/SignUp";
 import { verifyOtp } from "@/services/apiServices";
 import { toast } from "react-toastify";
@@ -22,32 +21,33 @@ const OtpVerify: React.FC<EmailVerifyPops> = ({ email }) => {
     try {
       setIsLoading(true);
 
-      const paylod = {
+      const payload = {
         email: email,
         otp: otp,
       };
 
-      const response = await verifyOtp(paylod);
+      const response = await verifyOtp(payload);
       if (response?.token && response?.user) {
         localStorage.setItem("auth_token", response.token);
         localStorage.setItem("user", JSON.stringify(response.user));
       }
       toast.success(response?.message);
-      router.push("liveEditor");
-    } catch (error: any) {
-      toast.error(error?.message);
+      router.push("folder");
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
     } finally {
       setIsLoading(false);
     }
   };
   return (
     <div className="bg-darkBg h-screen flex justify-center items-center">
-      <div className="text-background bg-[#1C2023] p-10 rounded-lg md:w-[30%] sm-[50%] w-[80%]">
+      <div className="text-background bg-[#1C2023] p-10 rounded-lg md:w-[30%] sm:w-[50%] w-[80%]">
         <div className="flex justify-center mb-4">
           <Image src={LogoImage} alt="Logo" width={160} height={40} />
         </div>
 
-        <h2 className="sM;text-2xl font-semibold text-center mb-8 ">
+        <h2 className="sM:text-2xl font-semibold text-center mb-8 ">
           OTP Verification
         </h2>
 

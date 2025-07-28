@@ -30,9 +30,7 @@ export default function EditorPage() {
   const [srcDoc, setSrcDoc] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const ignoreNextCursorEventRef = useRef(false);
   const [usersCounts, setUsersCount] = useState(0);
-  const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState<string>(`<html>
   <head>
     <style>
@@ -69,7 +67,6 @@ export default function EditorPage() {
       ? JSON.parse(localStorage.getItem("user") || "{}")
       : {};
   const userId = userInfo.id || Math.floor(Math.random() * 1000);
-  const color = useMemo(() => getRandomColor(), []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -77,7 +74,6 @@ export default function EditorPage() {
       const idFromPath = parts[parts.length - 1];
       setFileId(idFromPath);
     }
-    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -200,6 +196,7 @@ export default function EditorPage() {
   const handleDialogBox = async () => {
     setIsShareOpen(true);
     if (!fileId) {
+      return;
     } else {
       try {
         await updateFileContent(fileId, text);
@@ -214,7 +211,7 @@ export default function EditorPage() {
       const fileLink = window.location.href;
       const response = await shareFileByEmail(shareEmail, fileLink);
       toast.success("Email Share Successfully");
-    } catch (err: any) {
+    } catch (err) {
       console.log(err);
     } finally {
       setIsLoading(false);
@@ -228,15 +225,12 @@ export default function EditorPage() {
       <div className="flex justify-between items-center bg-white shadow px-6 py-3">
         <h2 className="text-xl font-semibold ">{title || "Loading..."}</h2>
         <div className="text-sm text-gray-600">Users Online: {usersCounts}</div>
-        <div className="text-sm text-gray-600">
-          {/* You: {mounted ? userInfo.firstName || "" : ""} */}
-        </div>
+
         <CommonButton
           label="Share "
           type="submit"
           isLoading={false}
           className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
-          // onClick={() => }
           onClick={handleDialogBox}
         />
       </div>
@@ -335,7 +329,7 @@ export default function EditorPage() {
               label="Copy "
               type="submit"
               isLoading={false}
-              className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+              className=" bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
               onClick={handleCopyLink}
             />
           </div>

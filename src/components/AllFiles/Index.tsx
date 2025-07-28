@@ -32,26 +32,31 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
         setFiles(data);
 
         setLoading(false);
-      } catch (error: any) {
-        console.error("Failed to fetch files:", error.message);
+      } catch (error) {
+        console.error("Failed to fetch files:", error);
       }
     };
 
     FetchgetMyFiles();
   }, []);
-  const openDialog = () => setDialogOpen(true);
-  const closeDialog = () => setDialogOpen(false);
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    setTitle("");
+  };
   const createFile = async () => {
     setLoading(true);
 
     try {
-      const data = await createFileApi(title);
+      const data = await createFileApi(title.trim());
       toast.success(data?.message || "File Created Succcessfully");
 
       router.push(`/editor/${data.id}`);
     } catch (err) {
       console.error(err);
       toast.error("Error in Creating File");
+    } finally {
+      setLoading(false);
     }
   };
   const openDialogbox = () => {
@@ -71,15 +76,15 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
       <div className=" flex justify-between items-center">
         <h1 className="text-2xl font-bold mb-6 text-white">{headerContent}</h1>
         {isButtonshow ? (
-          <h1 className="text-2xl font-bold mb-6">
+          <div className="text-2xl font-bold mb-6">
             <CommonButton
               label=" + Create File"
               type="submit"
               isLoading={false}
-              className="w-full bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+              className=" sm:w-[100%] w-[30%] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300  "
               onClick={openDialogbox}
             />
-          </h1>
+          </div>
         ) : (
           <></>
         )}

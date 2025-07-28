@@ -12,11 +12,6 @@ import { useRouter } from "next/navigation";
 
 const Login = () => {
   const router = useRouter();
-  useEffect(() => {
-    if (localStorage.getItem("auth_token")) {
-      router.push("/dashboard", { scroll: false });
-    }
-  }, [router]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
     useState<boolean>(false);
@@ -24,7 +19,13 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: "",
   });
-  const handlechange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      router.push("/folder", { scroll: false });
+    }
+  }, [router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (!emailValidator.test(value)) {
@@ -43,8 +44,9 @@ const Login = () => {
       toast.success(result?.message);
 
       setIsOtpVerifyModelshow(true);
-    } catch (error: any) {
-      toast.error(error?.message);
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
     } finally {
       setIsLoading(false);
     }
@@ -68,7 +70,7 @@ const Login = () => {
                 label=""
                 name="email"
                 value={formData.email}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Email"
                 className=""
                 required
@@ -85,7 +87,7 @@ const Login = () => {
               />
             </form>
 
-            <p className="text-xl text-center mt-6">
+            <p className="text-sm text-center mt-6">
               Don&apos;t have an account?{" "}
               <a href="/signup" className="text-green-400 hover:underline">
                 Register

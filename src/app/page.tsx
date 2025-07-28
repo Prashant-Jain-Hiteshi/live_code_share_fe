@@ -1,12 +1,5 @@
 "use client";
-
 import { useEffect, useState } from "react";
-import axios from "axios";
-// import { apiServices } from "@/services/apiServices";
-import InputField from "@/components/CommonInput";
-import CommonButton from "@/components/CommonButtton";
-import OtpInput from "@/components/CommonOtpInput";
-import Login from "@/components/auth/Login";
 import { useRouter } from "next/navigation";
 
 export default function Home() {

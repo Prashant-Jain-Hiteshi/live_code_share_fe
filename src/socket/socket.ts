@@ -44,7 +44,6 @@ export const initializeSocket = (): Socket<
   if (!socket) {
     socket = io(process.env.NEXT_PUBLIC_SOCKET_URL, {
       transports: ["websocket"],
-      // reconnectionAttempts: 3,
     });
 
     socket.on("connect", () => {});

@@ -1,4 +1,3 @@
-// components/CommonDialog.tsx
 "use client";
 
 import { DialogdProps } from "@/utils/common/Interface/CommonDialog";

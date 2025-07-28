@@ -7,19 +7,11 @@ import { emailValidator } from "@/helper/Validator";
 import { signupApi } from "@/services/apiServices";
 import { toast } from "react-toastify";
 import CommonButton from "@/components/CommonButtton";
-
 import OtpVerify from "../OtpVerify";
 import { useRouter } from "next/navigation";
 
 const SignUp = () => {
   const router = useRouter();
-
-  useEffect(() => {
-    if (localStorage.getItem("auth_token")) {
-      router.push("/dashboard", { scroll: false });
-    }
-  }, [router]);
-
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
     useState<boolean>(false);
@@ -34,7 +26,14 @@ const SignUp = () => {
     lastName: "",
     email: "",
   });
-  const handlechange = (e: React.ChangeEvent<HTMLInputElement>) => {
+
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      router.push("/dashboard", { scroll: false });
+    }
+  }, [router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setErrors(prev => {
@@ -70,8 +69,9 @@ const SignUp = () => {
       toast.success(result?.message);
 
       setIsOtpVerifyModelshow(true);
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
     } finally {
       setIsLoading(false);
     }
@@ -101,7 +101,7 @@ const SignUp = () => {
                 label=""
                 name="firstName"
                 value={formData.firstName}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="First Name"
                 className=""
                 errorSpace={true}
@@ -112,7 +112,7 @@ const SignUp = () => {
                 label=""
                 name="lastName"
                 value={formData.lastName}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Last Name"
                 className=""
                 errorSpace={true}
@@ -124,7 +124,7 @@ const SignUp = () => {
                 label=""
                 name="email"
                 value={formData.email}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Email"
                 className=""
                 required
