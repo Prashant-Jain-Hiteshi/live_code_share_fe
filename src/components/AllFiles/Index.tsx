@@ -121,6 +121,7 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
           isLoading={loading}
           className=" w-[30%] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
           onClick={createFile}
+          disabled={title.trim() === ""}
         />
       </CommonDialog>
     </div>

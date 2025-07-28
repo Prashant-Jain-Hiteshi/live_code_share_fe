@@ -30,7 +30,9 @@ export default function EditorPage() {
   const [srcDoc, setSrcDoc] = useState("");
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
+  const ignoreNextCursorEventRef = useRef(false);
+  const [usersCounts, setUsersCount] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const [code, setCode] = useState<string>(`<html>
   <head>
     <style>
@@ -49,8 +51,15 @@ export default function EditorPage() {
   const editorRef = useRef<monacoType.editor.IStandaloneCodeEditor | null>(
     null
   );
-  const monacoRef = useRef<typeof monacoType | null>(null);
-  const decorationsRef = useRef<{ [key: number]: string[] }>({});
+
+  const [remoteCursors, setRemoteCursors] = useState<
+    {
+      userId: number;
+      position: { lineNumber: number; column: number };
+      userName: string;
+      color: string;
+    }[]
+  >([]);
 
   const socket = useMemo(() => initializeSocket(), []);
   const gotSocketUpdateRef = useRef(false);
@@ -68,6 +77,7 @@ export default function EditorPage() {
       const idFromPath = parts[parts.length - 1];
       setFileId(idFromPath);
     }
+    setMounted(true);
   }, []);
 
   useEffect(() => {
@@ -99,55 +109,33 @@ export default function EditorPage() {
     });
 
     socket.on("cursor_update", ({ userId: remoteId, position, userName }) => {
-      console.log("losted cirso update", remoteId, position, userName);
-      if (
-        !editorRef.current ||
-        remoteId === userInfo.id ||
-        !monacoRef.current
-      ) {
-        console.log("for self", remoteId, userId);
-        return;
-      }
+      if (remoteId === userId) return;
 
-      const editor = editorRef.current;
-      const monaco = monacoRef.current;
-      const pos = new monaco.Position(position.lineNumber, position.column);
-
-      if (decorationsRef.current[remoteId]) {
-        editor.deltaDecorations(decorationsRef.current[remoteId], []);
-      }
-
-      const newDec = editor.deltaDecorations(
-        [],
-        [
-          {
-            range: new monaco.Range(
-              pos.lineNumber,
-              pos.column,
-              pos.lineNumber,
-              pos.column
-            ),
-            options: {
-              className: "remote-cursor",
-              afterContentClassName: "remote-cursor-label",
-            },
-          },
-        ]
-      );
-      decorationsRef.current[remoteId] = newDec;
-      injectCursorStyles(color, userName);
+      setRemoteCursors(prev => {
+        const existing = prev.find(c => c.userId === remoteId);
+        if (existing) {
+          return prev.map(c =>
+            c.userId === remoteId ? { ...c, position } : c
+          );
+        }
+        return [
+          ...prev,
+          { userId: remoteId, position, userName, color: getRandomColor() },
+        ];
+      });
     });
-
-    socket.on("user_joined", ({ userId }) => {
+    socket.on("user_joined", ({ userId, usersCount }) => {
       setUsers(prev => [...new Set([...prev, userId])]);
+      console.log("user joined new", usersCount);
+      setUsersCount(usersCount);
     });
 
-    socket.on("user_left", ({ userId }) => {
+    socket.on("user_left", ({ userId, usersLeft }) => {
       setUsers(prev => prev.filter(id => id !== userId));
-      if (editorRef.current && decorationsRef.current[userId]) {
-        editorRef.current.deltaDecorations(decorationsRef.current[userId], []);
-        delete decorationsRef.current[userId];
-      }
+
+      setRemoteCursors(prev => prev.filter(cursor => cursor.userId !== userId));
+      setUsersCount(usersLeft);
+      console.log("user left new", usersLeft);
     });
 
     return () => {
@@ -172,12 +160,8 @@ export default function EditorPage() {
     }
   };
 
-  const handleEditorDidMount = async (
-    editor: any,
-    monaco: typeof monacoType
-  ) => {
+  const handleEditorDidMount = (editor: any) => {
     editorRef.current = editor;
-    monacoRef.current = monaco;
     editor.onDidChangeCursorPosition((e: any) => {
       const position = e.position;
       socket.emit("cursor_move", {
@@ -188,7 +172,6 @@ export default function EditorPage() {
       });
     });
   };
-
   const handleCopyLink = () => {
     if (typeof window !== "undefined" && navigator?.clipboard) {
       navigator.clipboard
@@ -244,8 +227,9 @@ export default function EditorPage() {
     <div className="flex flex-col h-screen bg-gray-100">
       <div className="flex justify-between items-center bg-white shadow px-6 py-3">
         <h2 className="text-xl font-semibold ">{title || "Loading..."}</h2>
+        <div className="text-sm text-gray-600">Users Online: {usersCounts}</div>
         <div className="text-sm text-gray-600">
-          Users Online: {users.length}
+          {/* You: {mounted ? userInfo.firstName || "" : ""} */}
         </div>
         <CommonButton
           label="Share "
@@ -258,7 +242,7 @@ export default function EditorPage() {
       </div>
 
       <div className="flex-1 grid grid-cols-2 gap-4 p-4">
-        <div className="border rounded overflow-hidden shadow">
+        <div className="border rounded overflow-hidden shadow relative">
           <MonacoEditor
             defaultLanguage="html"
             value={text}
@@ -267,7 +251,39 @@ export default function EditorPage() {
             options={editorOptions}
             onMount={handleEditorDidMount}
           />
+          {remoteCursors.map(cursor => {
+            const top =
+              editorRef.current?.getTopForLineNumber(
+                cursor.position.lineNumber
+              ) || 0;
+            const left =
+              editorRef.current?.getOffsetForColumn(
+                cursor.position.lineNumber,
+                cursor.position.column
+              ) || 0;
+
+            return (
+              <div
+                key={cursor.userId}
+                style={{
+                  position: "absolute",
+                  left: `${left}px`,
+                  top: `${top}px`,
+                  backgroundColor: cursor.color,
+                  color: "#fff",
+                  fontSize: "10px",
+                  padding: "2px 4px",
+                  borderRadius: "4px",
+                  zIndex: 10,
+                  pointerEvents: "none",
+                }}
+              >
+                {cursor.userName}
+              </div>
+            );
+          })}
         </div>
+
         <div className="border rounded shadow bg-white overflow-hidden">
           <iframe
             title="Live Preview"
@@ -356,31 +372,4 @@ const editorOptions: monacoType.editor.IStandaloneEditorConstructionOptions = {
 function getRandomColor() {
   const colors = ["#e41c44", "#107569", "#ff9900", "#007bff", "#6f42c1"];
   return colors[Math.floor(Math.random() * colors.length)];
-}
-
-function injectCursorStyles(color: string, name: string) {
-  if (typeof document === "undefined") return;
-  const styleId = `cursor-style-${name}`;
-  if (document.getElementById(styleId)) return;
-  const style = document.createElement("style");
-  style.id = styleId;
-  style.innerHTML = `
-    .remote-cursor {
-      border-left: 2px solid ${color};
-      height: 100%;
-    }
-    .remote-cursor-label::after {
-      content: "${name}";
-      position: absolute;
-      background: ${color};
-      color: white;
-      padding: 2px 4px;
-      font-size: 10px;
-      top: -1.2em;
-      left: 0;
-      border-radius: 4px;
-      white-space: nowrap;
-    }
-  `;
-  document.head.appendChild(style);
 }
