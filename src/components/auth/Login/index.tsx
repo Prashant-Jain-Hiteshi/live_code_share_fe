@@ -12,50 +12,43 @@ import { useRouter } from "next/navigation";
 
 const Login = () => {
   const router = useRouter();
-  useEffect(() => {
-    if (localStorage.getItem("auth_token")) {
-      router.push("/dashboard", { scroll: false });
-    }
-  }, [router]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
     useState<boolean>(false);
-  const [errors, setErrors] = useState({
-    email: null as string | null,
-  });
+  const [errors, setErrors] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: "",
   });
-  const handlechange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (localStorage.getItem("auth_token")) {
+      router.push("/folder", { scroll: false });
+    }
+  }, [router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: null }));
+    if (!emailValidator.test(value)) {
+      setErrors("Please enter a valid email address.");
+    } else {
+      setErrors(null);
+    }
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedEmail = formData.email.trim();
-    const newErrors = {
-      email: null as string | null,
-    };
-    let hasError = false;
-    if (!emailValidator.test(trimmedEmail)) {
-      newErrors.email = "Please enter a valid email address.";
-      hasError = true;
-    }
-    setErrors(newErrors);
-    if (!hasError) {
-      try {
-        setIsLoading(true);
-        const result = await LoginApi(formData);
 
-        toast.success(result?.message);
+    try {
+      setIsLoading(true);
+      const result = await LoginApi(formData);
 
-        setIsOtpVerifyModelshow(true);
-      } catch (error: any) {
-        toast.error(error.message);
-      } finally {
-        setIsLoading(false);
-      }
+      toast.success(result?.message);
+
+      setIsOtpVerifyModelshow(true);
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
+    } finally {
+      setIsLoading(false);
     }
   };
   return (
@@ -71,17 +64,18 @@ const Login = () => {
 
             <h2 className="text-2xl font-semibold text-center mb-6">Login</h2>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="" onSubmit={handleSubmit}>
               <InputField
                 type="email"
                 label=""
                 name="email"
                 value={formData.email}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Email"
                 className=""
                 required
-                extraValidation={() => errors.email}
+                externalError={errors || ""}
+                errorSpace={true}
               />
 
               <CommonButton
@@ -89,6 +83,7 @@ const Login = () => {
                 type="submit"
                 isLoading={isLoading}
                 className="w-full bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+                disabled={!emailValidator.test(formData.email)}
               />
             </form>
 

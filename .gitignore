@@ -29,3 +29,9 @@ yarn-error.log*
 next-env.d.ts
 ~
 yarn.lock
+
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local

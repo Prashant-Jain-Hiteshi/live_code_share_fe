@@ -7,12 +7,25 @@ import { emailValidator } from "@/helper/Validator";
 import { signupApi } from "@/services/apiServices";
 import { toast } from "react-toastify";
 import CommonButton from "@/components/CommonButtton";
-
 import OtpVerify from "../OtpVerify";
 import { useRouter } from "next/navigation";
 
 const SignUp = () => {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
+    useState<boolean>(false);
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+  });
+  const [errors, setErrors] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+  });
 
   useEffect(() => {
     if (localStorage.getItem("auth_token")) {
@@ -20,66 +33,55 @@ const SignUp = () => {
     }
   }, [router]);
 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isOtpVerifyModelShow, setIsOtpVerifyModelshow] =
-    useState<boolean>(false);
-  const [errors, setErrors] = useState({
-    firstName: null as string | null,
-    lastName: null as string | null,
-    email: null as string | null,
-  });
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-  });
-  const handlechange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    setErrors(prev => ({ ...prev, [name]: null }));
+    setErrors(prev => {
+      const updatedErrors = { ...prev };
+
+      if (name === "firstName" || name === "lastName") {
+        updatedErrors[name] =
+          value.trim() === ""
+            ? `${name === "firstName" ? "First" : "Last"} name is required`
+            : "";
+      }
+
+      if (name === "email") {
+        if (value.trim() === "") {
+          updatedErrors.email = "Email is required";
+        } else if (!emailValidator.test(value)) {
+          updatedErrors.email = "Enter a valid email";
+        } else {
+          updatedErrors.email = "";
+        }
+      }
+
+      return updatedErrors;
+    });
   };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // toast.success("Submit clicked");
 
-    const trimmedFirstName = formData.firstName.trim();
-    const trimmedLastName = formData.lastName.trim();
-    const trimmedEmail = formData.email.trim();
-    const newErrors = {
-      firstName: null as string | null,
-      lastName: null as string | null,
-      email: null as string | null,
-    };
+    try {
+      setIsLoading(true);
+      const result = await signupApi(formData);
 
-    let hasError = false;
-    if (!trimmedFirstName) {
-      newErrors.firstName = "First name is required.";
-      hasError = true;
-    }
-    if (!trimmedLastName) {
-      newErrors.lastName = "Last name is required.";
-      hasError = true;
-    }
-    if (!emailValidator.test(trimmedEmail)) {
-      newErrors.email = "Please enter a valid email address.";
-      hasError = true;
-    }
-    setErrors(newErrors);
-    if (!hasError) {
-      try {
-        setIsLoading(true);
-        const result = await signupApi(formData);
+      toast.success(result?.message);
 
-        toast.success(result?.message);
-        // router.push("");
-        setIsOtpVerifyModelshow(true);
-      } catch (error: any) {
-        toast.error(error.message);
-      } finally {
-        setIsLoading(false);
-      }
+      setIsOtpVerifyModelshow(true);
+    } catch (error) {
+      const err = error as { message?: string };
+      toast.error(err?.message);
+    } finally {
+      setIsLoading(false);
     }
   };
+  const isSubmitDisabled = () => {
+    const hasError = Object.values(errors).some(error => error.trim() !== "");
+    const isEmpty = Object.values(formData).some(value => value.trim() === "");
+    return hasError || isEmpty || isLoading;
+  };
+
   return (
     <>
       {isOtpVerifyModelShow ? (
@@ -99,18 +101,22 @@ const SignUp = () => {
                 label=""
                 name="firstName"
                 value={formData.firstName}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="First Name"
                 className=""
+                errorSpace={true}
+                externalError={errors.firstName || ""}
               />
               <InputField
                 type="text"
                 label=""
                 name="lastName"
                 value={formData.lastName}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Last Name"
                 className=""
+                errorSpace={true}
+                externalError={errors.lastName || ""}
               />
 
               <InputField
@@ -118,11 +124,13 @@ const SignUp = () => {
                 label=""
                 name="email"
                 value={formData.email}
-                onChange={handlechange}
+                onChange={handleChange}
                 placeholder="Email"
                 className=""
                 required
                 extraValidation={() => errors.email}
+                externalError={errors.email || ""}
+                errorSpace={true}
               />
 
               <CommonButton
@@ -130,6 +138,7 @@ const SignUp = () => {
                 type="submit"
                 isLoading={isLoading}
                 className="w-full bg-green-500 text-white font-semibold py-3 rounded-md hover:bg-green-600 transition duration-300  "
+                disabled={isSubmitDisabled()}
               />
             </form>
 

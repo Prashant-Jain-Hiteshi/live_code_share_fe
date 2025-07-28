@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      {/* <head /> */}
+   
       <body className="font-default" cz-shortcut-listen="true">
         {children}
         <ToastContainer position="top-right" autoClose={3000} />
