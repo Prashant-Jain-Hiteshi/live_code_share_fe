@@ -76,12 +76,12 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
       <div className=" flex justify-between items-center">
         <h1 className="text-2xl font-bold mb-6 text-white">{headerContent}</h1>
         {isButtonshow ? (
-          <div className="text-2xl font-bold mb-6">
+          <div className="   font-bold mb-6">
             <CommonButton
-              label=" + Create File"
+              label="+ Create File"
               type="submit"
               isLoading={false}
-              className=" sm:w-[100%] w-[30%] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300  "
+              className="  bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300  whitespace-nowrap "
               onClick={openDialogbox}
             />
           </div>
@@ -124,7 +124,7 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
           label="Create File"
           type="submit"
           isLoading={loading}
-          className=" w-[30%] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          className=" w-[30%] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 whitespace-nowrap"
           onClick={createFile}
           disabled={title.trim() === ""}
         />

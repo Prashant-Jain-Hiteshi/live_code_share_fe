@@ -122,7 +122,7 @@ export default function EditorPage() {
     });
     socket.on("user_joined", ({ userId, usersCount }) => {
       setUsers(prev => [...new Set([...prev, userId])]);
-      console.log("user joined new", usersCount);
+
       setUsersCount(usersCount);
     });
 
@@ -131,7 +131,6 @@ export default function EditorPage() {
 
       setRemoteCursors(prev => prev.filter(cursor => cursor.userId !== userId));
       setUsersCount(usersLeft);
-      console.log("user left new", usersLeft);
     });
 
     return () => {

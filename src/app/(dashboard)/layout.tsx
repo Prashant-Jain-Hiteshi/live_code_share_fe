@@ -9,7 +9,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(true);
   useEffect(() => {
     if (!localStorage.getItem("auth_token")) {
-      router.push("/", { scroll: false });
+      router.push("/login", { scroll: false });
     }
   }, []);
 
