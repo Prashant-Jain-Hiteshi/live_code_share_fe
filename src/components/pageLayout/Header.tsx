@@ -1,10 +1,10 @@
 "use client";
 import { HeaderProps } from "@/utils/common/Interface/SideBar";
 import Image from "next/image";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Hamburger from "../../assets/Humburger.png";
 import { BellIcon } from "@heroicons/react/24/outline";
-import { myPendingInvites } from "@/services/apiServices";
+import { myInvites } from "@/services/apiServices";
 import { toast } from "react-toastify";
 import { Invitation, UserInfo } from "@/utils/common/Interface/Heder";
 import Notification from "../Notification";
@@ -28,7 +28,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     }
     const fetchInvites = async () => {
       try {
-        const res = await myPendingInvites();
+        const res = await myInvites("pending");
 
         setInvitations(res.invitations || []);
       } catch (error) {
@@ -51,6 +51,12 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [openNotif]);
+  const handleAccept = useCallback((id: number) => {
+    setInvitations(prev => prev.filter(inv => inv.id !== id));
+  }, []);
+  const handleCloseNotif = useCallback(() => {
+    setOpenNotif(false);
+  }, []);
 
   return (
     <div className="flex  items-center justify-end  text-white bg-card p-4">
@@ -70,7 +76,13 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             {invitations.length}
           </span>
         )}
-        {openNotif && <Notification invitations={invitations} />}
+        {openNotif && (
+          <Notification
+            invitations={invitations}
+            onAccept={handleAccept}
+            setOpenNotif={handleCloseNotif}
+          />
+        )}
       </div>
       {userInfo && (
         <div className="flex items-center gap-3 bg-card text-white px-4 py-2 rounded-xl shadow-sm shadow-gray-600">

@@ -197,9 +197,11 @@ export const shareFileByEmail = async (email: string, fileLink: string) => {
   }
 };
 
-export const myPendingInvites = async () => {
+export const myInvites = async (status: string) => {
   try {
-    const response = await api.get("/invitation/my/pending");
+    const response = await api.get(`/invitation/my/`, {
+      params: { status },
+    });
     return response.data;
   } catch (err) {
     const error = err as AxiosError<{ message?: string }>;
@@ -207,6 +209,26 @@ export const myPendingInvites = async () => {
       console.error("API Error:", error.response.data?.message);
       throw new Error(
         error.response.data?.message || "Failed to fetch Invitations."
+      );
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+export const acceptInvite = async (invitationId: number) => {
+  try {
+    const response = await api.put(`/invitation/${invitationId}/accept`);
+    return response.data;
+  } catch (err) {
+    const error = err as AxiosError<{ message?: string }>;
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(
+        error.response.data?.message || "Failed to fetch Accept Invitation."
       );
     } else if (error.request) {
       console.error("Request Error:", error.request);

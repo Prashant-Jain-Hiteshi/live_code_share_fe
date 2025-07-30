@@ -1,12 +1,25 @@
+import { acceptInvite } from "@/services/apiServices";
 import { NotificationProps } from "@/utils/common/Interface/Heder";
 import { useRouter } from "next/navigation";
 import React from "react";
+import { toast } from "react-toastify";
 
-const Notification: React.FC<NotificationProps> = ({ invitations }) => {
+const Notification: React.FC<NotificationProps> = ({
+  invitations,
+  onAccept,
+  setOpenNotif,
+}) => {
   const router = useRouter();
-  const handleNavigate = (roomId: number) => {
-    console.log(roomId, "roomId");
-    router.push(`/editor/${roomId}`);
+  const handleNavigate = async (roomId: number, inviteId: number) => {
+    try {
+      await acceptInvite(inviteId);
+      toast.success("Welcome to Live Code Collab");
+      onAccept(inviteId);
+      setOpenNotif();
+      router.push(`/editor/${roomId}`);
+    } catch (error) {
+      console.error("Failed to accept invitation", error);
+    }
   };
   return (
     <div className="absolute right-0 top-10 mt-2 w-72 bg-card text-white shadow-lg rounded-md z-50">
@@ -22,7 +35,7 @@ const Notification: React.FC<NotificationProps> = ({ invitations }) => {
           invitations.map((invite, idx) => (
             <div
               key={idx}
-              onClick={() => handleNavigate(invite.room.id)}
+              onClick={() => handleNavigate(invite.room.id, invite.id)}
               className="flex items-start gap-3 px-4 py-3 hover:bg-gray-800 cursor-pointer transition-colors duration-200"
             >
               <div className="text-sm text-white leading-snug">
