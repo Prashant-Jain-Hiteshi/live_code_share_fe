@@ -178,7 +178,7 @@ export const updateFileContent = async (fileId: string, content: string) => {
 };
 export const shareFileByEmail = async (email: string, fileLink: string) => {
   try {
-    const response = await api.post("/files/share", { email, fileLink });
+    const response = await api.post("/invitation/share", { email, fileLink });
     return response.data;
   } catch (err) {
     const error = err as AxiosError<{ message?: string }>;
@@ -186,6 +186,27 @@ export const shareFileByEmail = async (email: string, fileLink: string) => {
       console.error("API Error:", error.response.data?.message);
       throw new Error(
         error.response.data?.message || "Failed to share file by email."
+      );
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+
+export const myPendingInvites = async () => {
+  try {
+    const response = await api.get("/invitation/my/pending");
+    return response.data;
+  } catch (err) {
+    const error = err as AxiosError<{ message?: string }>;
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(
+        error.response.data?.message || "Failed to fetch Invitations."
       );
     } else if (error.request) {
       console.error("Request Error:", error.request);
