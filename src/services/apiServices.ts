@@ -24,9 +24,11 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   response => response,
+
   error => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem("token");
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
       window.location.href = "/login";
     }
     return Promise.reject(error);
@@ -176,7 +178,7 @@ export const updateFileContent = async (fileId: string, content: string) => {
 };
 export const shareFileByEmail = async (email: string, fileLink: string) => {
   try {
-    const response = await api.post("/files/share", { email, fileLink });
+    const response = await api.post("/invitation/share", { email, fileLink });
     return response.data;
   } catch (err) {
     const error = err as AxiosError<{ message?: string }>;
@@ -184,6 +186,49 @@ export const shareFileByEmail = async (email: string, fileLink: string) => {
       console.error("API Error:", error.response.data?.message);
       throw new Error(
         error.response.data?.message || "Failed to share file by email."
+      );
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+
+export const myInvites = async (status: string) => {
+  try {
+    const response = await api.get(`/invitation/my/`, {
+      params: { status },
+    });
+    return response.data;
+  } catch (err) {
+    const error = err as AxiosError<{ message?: string }>;
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(
+        error.response.data?.message || "Failed to fetch Invitations."
+      );
+    } else if (error.request) {
+      console.error("Request Error:", error.request);
+      throw new Error("No response from server.");
+    } else {
+      console.error("Error:", error.message);
+      throw new Error("Something went wrong.");
+    }
+  }
+};
+export const acceptInvite = async (invitationId: number) => {
+  try {
+    const response = await api.put(`/invitation/${invitationId}/accept`);
+    return response.data;
+  } catch (err) {
+    const error = err as AxiosError<{ message?: string }>;
+    if (error.response) {
+      console.error("API Error:", error.response.data?.message);
+      throw new Error(
+        error.response.data?.message || "Failed to fetch Accept Invitation."
       );
     } else if (error.request) {
       console.error("Request Error:", error.request);
