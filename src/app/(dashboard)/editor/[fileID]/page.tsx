@@ -261,7 +261,7 @@ export default function EditorPage() {
                 style={{
                   position: "absolute",
                   left: `${left}px`,
-                  top: `${top}px`,
+                  top: `${top - 20}px`,
                   backgroundColor: cursor.color,
                   color: "#fff",
                   fontSize: "10px",

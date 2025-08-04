@@ -15,9 +15,14 @@ type FileType = {
 interface AllFilesProps {
   headerContent?: string;
   isButtonshow?: boolean;
+  filesData?: FileType[];
 }
 
-const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
+const AllFiles: React.FC<AllFilesProps> = ({
+  headerContent,
+  isButtonshow,
+  filesData,
+}) => {
   const [files, setFiles] = useState<FileType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -26,19 +31,11 @@ const AllFiles: React.FC<AllFilesProps> = ({ headerContent, isButtonshow }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const FetchgetMyFiles = async () => {
-      try {
-        const data = await getMyFiles();
-        setFiles(data);
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Failed to fetch files:", error);
-      }
-    };
-
-    FetchgetMyFiles();
-  }, []);
+    if (filesData) {
+      setLoading(false);
+      setFiles(filesData);
+    }
+  }, [filesData]);
 
   const closeDialog = () => {
     setDialogOpen(false);
