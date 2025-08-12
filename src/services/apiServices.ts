@@ -239,3 +239,38 @@ export const acceptInvite = async (invitationId: number) => {
     }
   }
 };
+export const compileAndRunCode = async (code: string, languageId: number) => {
+  try {
+    const response = await api.post("/files/run", { code, languageId });
+    return response.data;
+  } catch (err) {
+    const error = err as AxiosError<any>;
+
+    if (error.response) {
+      console.error("API Error:", error.response?.data);
+
+      return {
+        stdout: null,
+        stderr: error.response.data?.stderr || null,
+        status: error.response.data?.message || "Compilation Error",
+        message: error.response.data?.status || null,
+      };
+    }
+
+    if (error.request) {
+      console.error("No response from server:", error.request);
+      return {
+        stdout: null,
+        stderr: "No response from server.",
+        status: "Error",
+      };
+    }
+
+    console.error("Unexpected Error:", error.message);
+    return {
+      stdout: null,
+      stderr: "Unexpected error occurred.",
+      status: "Error",
+    };
+  }
+};

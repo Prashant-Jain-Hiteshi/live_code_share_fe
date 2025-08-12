@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
 // Define the type for our custom events
@@ -14,6 +18,7 @@ interface ServerToClientEvents {
   }) => void;
   user_joined: (data: { userId: number; usersCount: number }) => void;
   user_left: (data: { userId: number; usersLeft: number }) => void;
+  output_update: (data: { output: string }) => void;
 }
 
 interface ClientToServerEvents {
@@ -33,6 +38,7 @@ interface ClientToServerEvents {
     };
     userName: string;
   }) => void;
+  output_update: (data: { roomId: number; output: string }) => void;
 }
 
 let socket: Socket<ServerToClientEvents, ClientToServerEvents>;
