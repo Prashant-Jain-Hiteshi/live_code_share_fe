@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { initializeSocket } from "@/socket/socket";
+import { initializeSocket } from "../../../../socket/socket";
 import dynamic from "next/dynamic";
 import type * as monacoType from "monaco-editor";
 import CommonButton from "@/components/CommonButtton";
@@ -10,10 +10,14 @@ import { toast } from "react-toastify";
 import InputField from "@/components/CommonInput";
 import { emailValidator } from "@/helper/Validator";
 import {
+  compileAndRunCode,
   getFileById,
   shareFileByEmail,
   updateFileContent,
 } from "@/services/apiServices";
+import SelectDropdown from "@/components/CommonDropDown";
+import languages from ".././../../../utils/constants/language.json";
+import { languageIdToMonacoMap } from "@/utils/constants/languageMap";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
@@ -31,6 +35,11 @@ export default function EditorPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [usersCounts, setUsersCount] = useState(0);
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [languageError, setLanguageError] = useState("");
+  const [output, setOutput] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+
   const [code, setCode] = useState<string>(`<html>
   <head>
     <style>
@@ -83,6 +92,7 @@ export default function EditorPage() {
       try {
         const data = await getFileById(fileId);
         if (!gotSocketUpdateRef.current) setText(data.content || "");
+
         setTitle(data.title || "Untitled");
       } catch (err) {
         console.error("Error fetching file:", err);
@@ -125,6 +135,9 @@ export default function EditorPage() {
 
       setUsersCount(usersCount);
     });
+    socket.on("output_update", ({ output }) => {
+      setOutput(output);
+    });
 
     socket.on("user_left", ({ userId, usersLeft }) => {
       setUsers(prev => prev.filter(id => id !== userId));
@@ -138,6 +151,7 @@ export default function EditorPage() {
       socket.off("cursor_update");
       socket.off("user_joined");
       socket.off("user_left");
+      socket.off("output_update");
     };
   }, [socket, fileId, userId]);
 
@@ -218,26 +232,98 @@ export default function EditorPage() {
       setShareEmail("");
     }
   };
+  const selectedLanguageMonaco = useMemo(() => {
+    const langId = parseInt(selectedLanguage);
+
+    const lang = languageIdToMonacoMap[langId] || "plaintext";
+
+    return lang;
+  }, [selectedLanguage]);
+  const handleRunCode = async () => {
+    setLoading(true);
+    try {
+      const result = await compileAndRunCode(text, parseInt(selectedLanguage));
+
+      const outputResult =
+        result.stderr ||
+        result.compile_output ||
+        result.stdout ||
+        result.status;
+
+      setOutput(outputResult);
+
+      socket.emit("output_update", {
+        roomId: Number(fileId),
+        output: outputResult,
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Unexpected error";
+      setOutput(errorMsg);
+
+      socket.emit("output_update", {
+        roomId: Number(fileId),
+        output: errorMsg,
+      });
+
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
-      <div className="flex justify-between items-center bg-white shadow px-6 py-3">
+      <div className="flex justify-between items-center bg-white shadow px-6 py-1">
         <h2 className="text-xl font-semibold ">{title || "Loading..."}</h2>
+        <SelectDropdown
+          label="Select Language"
+          name="language"
+          value={selectedLanguage}
+          onChange={e => setSelectedLanguage(e.target.value)}
+          options={languages.map(l => ({ label: l.label, value: l.id }))}
+          required
+          errorSpace
+          externalError={languageError}
+          className="hidden lg:block"
+        />
+
         <div className="text-sm text-gray-600">Users Online: {usersCounts}</div>
+        <CommonButton
+          onClick={handleRunCode}
+          label={loading ? "Running..." : "Run"}
+          className="hidden lg:block w-[80px]"
+        />
 
         <CommonButton
           label="Share "
           type="submit"
           isLoading={false}
-          className="w[50px] bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 "
+          className=" bg-green-500 text-white font-semibold py-2 rounded-md hover:bg-green-600 transition duration-300 w-[80px] "
           onClick={handleDialogBox}
+        />
+      </div>
+      <div className="flex justify-between items-center bg-white shadow px-6 py-2">
+        <SelectDropdown
+          name="language"
+          value={selectedLanguage}
+          onChange={e => setSelectedLanguage(e.target.value)}
+          options={languages.map(l => ({ label: l.label, value: l.id }))}
+          required
+          errorSpace={false}
+          externalError={languageError}
+          className=" lg:hidden "
+        />
+        <CommonButton
+          onClick={handleRunCode}
+          label={loading ? "Running..." : "Run"}
+          className="block lg:hidden w-[80px] "
         />
       </div>
 
       <div className="flex-1 grid grid-cols-2 gap-4 p-4">
         <div className="border rounded overflow-hidden shadow relative">
           <MonacoEditor
-            defaultLanguage="html"
+            language={selectedLanguageMonaco}
             value={text}
             theme="vs-dark"
             onChange={handleEditorChange}
@@ -277,15 +363,9 @@ export default function EditorPage() {
           })}
         </div>
 
-        <div className="border rounded shadow bg-white overflow-hidden">
-          <iframe
-            title="Live Preview"
-            srcDoc={srcDoc}
-            sandbox="allow-scripts"
-            frameBorder="0"
-            width="100%"
-            height="100%"
-          />
+        <div className="border rounded shadow bg-black text-white p-4 overflow-auto">
+          <h3 className="text-lg font-semibold mb-2">Output</h3>
+          <pre className="whitespace-pre-wrap">{output}</pre>
         </div>
       </div>
 

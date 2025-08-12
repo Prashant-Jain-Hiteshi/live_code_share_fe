@@ -1,0 +1,7 @@
+[
+  { "label": "JavaScript (Node.js 18.15.0)", "id": "63" },
+  { "label": "TypeScript (5.0.3)", "id": "74" },
+  { "label": "Python (3.11.2)", "id": "71" },
+  { "label": "C++ (GCC 12.2.0)", "id": "54" },
+  { "label": "Java (OpenJDK 17.0.6)", "id": "62" }
+]
